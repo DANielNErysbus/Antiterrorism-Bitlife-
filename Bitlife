@@ -1,0 +1,172 @@
+import random
+from dataclasses import dataclass, field
+from typing import List, Dict
+import time
+
+@dataclass
+class Terrorist:
+    name: str
+    age: int
+    role: str
+    loyalty: int
+    skills: List[str]
+    location: str
+    is_alive: bool = True
+    traits: List[str] = field(default_factory=list)
+    wanted_level: int = 0
+    relations: List[str] = field(default_factory=list)
+
+@dataclass
+class TerrorGroup:
+    name: str
+    leaders: List[str]
+    structure: Dict[str, int]
+    ideology: str
+    territory: str
+    strength: int = 50
+
+@dataclass
+class Player:
+    name: str
+    agency: str
+    rank: str = "Стажёр"
+    reputation: int = 50
+    completed_missions: int = 0
+    skills: Dict[str, int] = field(default_factory=lambda: {
+        "Стрельба": 30,
+        "Аналитика": 40,
+        "Переговоры": 20,
+        "Хакерство": 10
+    })
+
+def generate_terrorist(group_name: str) -> Terrorist:
+    name = random.choice([
+        "Ахмад Аль-Багдади",
+        "Мухаммад Аль-Халид",
+        "Исмаил Гурбани",
+        "Зия Ур-Рахман"
+    ])
+    age = random.randint(18, 55)
+    role = random.choice(["Боевик", "Снайпер", "Подрывник", "Вербовщик", "Финансист"])
+
+    return Terrorist(
+        name=name,
+        age=age,
+        role=role,
+        loyalty=random.randint(30, 100),
+        skills=get_skills_by_role(role),
+        location=group_name,
+        traits=get_random_traits(),
+        wanted_level=random.randint(0, 5)
+    )
+
+def generate_terror_group(name: str) -> TerrorGroup:
+    leaders = [f"Лидер {random.randint(1, 100)}" for _ in range(random.randint(1, 3))]
+
+    return TerrorGroup(
+        name=name,
+        leaders=leaders,
+        structure={
+            "Боевики": random.randint(30, 200),
+            "Снайперы": random.randint(5, 20),
+            "Подрывники": random.randint(10, 30),
+            "Финансисты": random.randint(3, 10)
+        },
+        ideology=random.choice(["Исламистский", "Сепаратистский", "Анархистский"]),
+        territory=random.choice(["Кашмир", "Вазиристан", "Сомали", "Йемен"]),
+        strength=random.randint(30, 80)
+    )
+
+def start_game():
+    print("=== COUNTER-TERROR BITLIFE ===")
+    print("Создайте своего агента:")
+
+    player = Player(
+        name=input("Имя агента: "),
+        agency=select_agency()
+    )
+
+    groups = [
+        generate_terror_group("Освобождение Кашмира"),
+        generate_terror_group("Исламский Джихад"),
+        generate_terror_group("Аль-Умма")
+    ]
+
+    terrorists = [generate_terrorist(group.name) for group in groups for _ in range(10)]
+
+    year = 2023
+    while year < 2033 and player.reputation < 100:
+        print(f"\n=== {year} год ===")
+        print(f"{player.rank} {player.name} | Репутация: {player.reputation}")
+
+        handle_random_event(player, groups, terrorists)
+
+        check_promotion(player)
+
+        year += 1
+        time.sleep(1)
+
+    print(f"\nИгра окончена! Ваш финальный ранг: {player.rank}")
+
+def select_agency():
+    agencies = {
+        "1": {"name": "FSB", "bonus": "Силовые операции"},
+        "2": {"name": "CIA", "bonus": "Киберразведка"},
+        "3": {"name": "MI6", "bonus": "Агентурная сеть"}
+    }
+
+    print("\nВыберите спецслужбу:")
+    for num, data in agencies.items():
+        print(f"{num}. {data['name']} ({data['bonus']})")
+
+    while True:
+        choice = input("> ")
+        if choice in agencies:
+            return agencies[choice]["name"]
+        print("Неверный ввод!")
+
+def handle_random_event(player: Player, groups: List[TerrorGroup], terrorists: List[Terrorist]):
+    events = [
+        {"type": "mission", "weight": 70},
+        {"type": "organization_activity", "weight": 20},
+        {"type": "training", "weight": 10}
+    ]
+
+    event = random.choices(
+        [e["type"] for e in events],
+        weights=[e["weight"] for e in events]
+    )[0]
+
+    if event == "mission":
+        start_mission(player, terrorists)
+    elif event == "organization_activity":
+        org_activity(groups)
+    else:
+        training_event(player)
+
+def start_mission(player: Player, terrorists: List[Terrorist]):
+    target = random.choice([t for t in terrorists if t.is_alive])
+
+    print(f"\n🚨 МИССИЯ: {target.role.upper()} {target.name}")
+    print(f"Локация: {target.location}")
+    print(f"Приметы: {', '.join(target.traits) if target.traits else 'Неизвестны'}")
+    print(f"Уровень угрозы: {'★' * target.wanted_level}")
+
+    print("\nВыберите подход:")
+    print("1. Силовая операция (Стрельба)")
+    print("2. Вербовка информатора (Переговоры)")
+    print("3. Киберслежка (Хакерство)")
+
+    choice = input("> ")
+    skill = {"1": "Стрельба", "2": "Переговоры", "3": "Хакерство"}.get(choice, "")
+
+    if skill and player.skills[skill] > random.randint(0, 100):
+        print(f"✅ Успех! {target.name} ликвидирован.")
+        target.is_alive = False
+        player.reputation += 10
+        player.completed_missions += 1
+    else:
+        print("❌ Провал! Цель избежала захвата.")
+
+if __name__ == "__main__":
+    start_game()
