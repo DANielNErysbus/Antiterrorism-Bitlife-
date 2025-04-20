@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Counter-Terror BitLife</title>
+    <style>
+        /* ... предыдущие стили ... */
+
+        /* NEW: Улучшенные стили для древа */
+        .tree-container {
+            display: none;
+            margin-top: 20px;
+            border: 1px solid #d4d4d4;
+            padding: 20px;
+            border-radius: 8px;
+            background-color: #f8f8f8;
+        }
+        
+        .member-card {
+            border: 1px solid #dcdcdc;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 6px;
+            background-color: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        
+        .member-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .member-name {
+            font-weight: bold;
+            font-size: 16px;
+            color: #333;
+        }
+        
+        .member-status {
+            font-size: 14px;
+            padding: 3px 8px;
+            border-radius: 12px;
+            background-color: #e1e1e1;
+        }
+        
+        .member-info {
+            margin: 10px 0;
+            font-size: 14px;
+            color: #555;
+        }
+        
+        .member-actions {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+            margin-top: 15px;
+        }
+        
+        .member-action {
+            padding: 8px 12px;
+            background-color: #3498db;
+            color: white;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            text-align: center;
+            transition: background-color 0.2s;
+        }
+        
+        .member-action:hover {
+            background-color: #2980b9;
+        }
+        
+        .action-negotiate { background-color: #27ae60; }
+        .action-eliminate { background-color: #e74c3c; }
+        .action-capture { background-color: #f39c12; }
+        .action-surveillance { background-color: #9b59b6; }
+        .action-interrogate { background-color: #34495e; }
+        
+        .dialog-box {
+            margin-top: 15px;
+            padding: 12px;
+            background-color: #eef7fa;
+            border-radius: 6px;
+            border-left: 4px solid #3498db;
+            font-style: italic;
+            color: #2c3e50;
+        }
+        
+        .unknown-member {
+            padding: 15px;
+            text-align: center;
+            color: #95a5a6;
+            font-style: italic;
+            background-color: #f9f9f9;
+            border-radius: 6px;
+            margin: 10px 0;
+        }
+        
+        .connection-lines {
+            position: relative;
+            height: 20px;
+            margin: 5px 0;
+        }
+        
+        .connection-line {
+            position: absolute;
+            height: 2px;
+            background-color: #bdc3c7;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+    </style>
+</head>
+<body>
+    <!-- ... предыдущий HTML ... -->
+
+    <div id="tree-container" class="tree-container">
+        <h3 style="margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 10px;">
+            Структура организации: <span id="current-org-name"></span>
+        </h3>
+        <div id="org-stats" style="margin-bottom: 15px;">
+            <div>Известно членов: <span id="known-members-count">0</span>/<span id="total-members-count">0</span></div>
+            <div>Уровень угрозы: <span id="threat-level">Низкий</span></div>
+        </div>
+        <div id="members-list"></div>
+        <button class="footer-btn back-btn" id="tree-back-btn" style="margin-top: 20px;">Назад к списку</button>
+    </div>
+
+    <script>
+        // ... предыдущие данные игры ...
+
+        // NEW: Улучшенные данные членов организаций
+        const organizationMembers = {
+            "Аль-Кайда": {
+                members: [
+                    { 
+                        id: 1,
+                        name: "Усама бин Ладен", 
+                        status: "Лидер", 
+                        known: true,
+                        level: 3,
+                        location: "Пакистан",
+                        bio: "Основатель Аль-Каиды. Ответственен за теракты 11 сентября.",
+                        dialog: [
+                            "Джихад - наш долг перед Аллахом",
+                            "Запад будет уничтожен огнём мщения",
+                            "Вы не понимаете нашей борьбы"
+                        ],
+                        connections: [2, 3]
+                    },
+                    { 
+                        id: 2,
+                        name: "Айман аз-Завахири", 
+                        status: "Идеолог", 
+                        known: false,
+                        level: 3,
+                        location: "Неизвестно",
+                        bio: "Главный идеолог, врач по образованию.",
+                        dialog: [
+                            "Ислам должен править миром",
+                            "Ваша демократия - иллюзия свободы"
+                        ],
+                        connections: [1, 4]
+                    },
+                    // ... другие члены ...
+                ],
+                threatLevel: "Высокий"
+            },
+            // ... другие организации ...
+        };
+
+        // NEW: Улучшенная функция показа древа
+        function showOrganizationTree(groupName) {
+            groupsScreen.style.display = 'none';
+            treeContainer.style.display = 'block';
+            document.getElementById('current-org-name').textContent = groupName;
+            
+            const orgData = organizationMembers[groupName] || { members: [] };
+            const membersList = document.getElementById('members-list');
+            membersList.innerHTML = '';
+            
+            // Статистика организации
+            const knownCount = orgData.members.filter(m => m.known).length;
+            document.getElementById('known-members-count').textContent = knownCount;
+            document.getElementById('total-members-count').textContent = orgData.members.length;
+            document.getElementById('threat-level').textContent = orgData.threatLevel;
+            
+            // Показываем известных членов по уровням
+            const levels = {};
+            orgData.members.forEach(member => {
+                if (!member.known) return;
+                if (!levels[member.level]) levels[member.level] = [];
+                levels[member.level].push(member);
+            });
+            
+            // Сортируем уровни и отображаем
+            Object.keys(levels).sort().reverse().forEach(level => {
+                const levelTitle = document.createElement('h4');
+                levelTitle.textContent = `Уровень ${level}`;
+                levelTitle.style.margin = '15px 0 10px';
+                levelTitle.style.color = '#7f8c8d';
+                membersList.appendChild(levelTitle);
+                
+                levels[level].forEach(member => {
+                    const memberCard = document.createElement('div');
+                    memberCard.className = 'member-card';
+                    memberCard.innerHTML = `
+                        <div class="member-header">
+                            <div class="member-name">${member.name}</div>
+                            <div class="member-status">${member.status}</div>
+                        </div>
+                        <div class="member-info">
+                            <div><strong>Местоположение:</strong> ${member.location}</div>
+                            <div><strong>Биография:</strong> ${member.bio}</div>
+                        </div>
+                        <div class="member-actions">
+                            <div class="member-action action-negotiate" data-action="negotiate">Переговоры</div>
+                            <div class="member-action action-eliminate" data-action="eliminate">Ликвидация</div>
+                            <div class="member-action action-capture" data-action="capture">Захват</div>
+                            <div class="member-action action-surveillance" data-action="surveillance">Наблюдение</div>
+                            <div class="member-action action-interrogate" data-action="interrogate">Допрос</div>
+                            <div class="member-action action-infiltrate" data-action="infiltrate">Внедрение</div>
+                        </div>
+                        <div id="dialog-${member.id}" class="dialog-box" style="display:none;"></div>
+                    `;
+                    membersList.appendChild(memberCard);
+                    
+                    // Обработчики действий
+                    memberCard.querySelectorAll('.member-action').forEach(btn => {
+                        btn.addEventListener('click', function() {
+                            handleMemberAction(groupName, member.id, this.dataset.action);
+                        });
+                    });
+                });
+            });
+            
+            // Показываем неизвестных членов
+            const unknownCount = orgData.members.filter(m => !m.known).length;
+            if (unknownCount > 0) {
+                const unknownTitle = document.createElement('h4');
+                unknownTitle.textContent = `Неизвестные члены (${unknownCount})`;
+                unknownTitle.style.margin = '15px 0 10px';
+                unknownTitle.style.color = '#7f8c8d';
+                membersList.appendChild(unknownTitle);
+                
+                const unknownCard = document.createElement('div');
+                unknownCard.className = 'unknown-member';
+                unknownCard.textContent = "Для раскрытия информации требуются дополнительные операции наблюдения или допросы";
+                membersList.appendChild(unknownCard);
+            }
+        }
+
+        // NEW: Улучшенная обработка действий
+        function handleMemberAction(groupName, memberId, action) {
+            const orgData = organizationMembers[groupName];
+            const member = orgData.members.find(m => m.id === memberId);
+            const dialogBox = document.getElementById(`dialog-${memberId}`);
+            
+            let resultText = "";
+            let successChance = 0;
+            let requiredSkill = "";
+            let difficulty = 0;
+            let stressIncrease = 0;
+            
+            // NEW: Разные типы действий с разными параметрами
+            switch(action) {
+                case "negotiate":
+                    resultText = `<strong>Переговоры с ${member.name}:</strong><br>"${member.dialog[Math.floor(Math.random() * member.dialog.length)]}"`;
+                    successChance = game.player.skills.negotiation;
+                    requiredSkill = "Переговоры";
+                    difficulty = 60 + member.level * 5;
+                    stressIncrease = 5;
+                    break;
+                    
+                case "eliminate":
+                    resultText = `<strong>Операция по ликвидации:</strong> ${member.name}`;
+                    successChance = game.player.skills.shooting;
+                    requiredSkill = "Стрельба";
+                    difficulty = 70 + member.level * 5;
+                    stressIncrease = 15;
+                    break;
+                    
+                // ... другие действия ...
+            }
+            
+            const success = Math.random() * 100 < (successChance - difficulty + 50);
+            
+            if (success) {
+                // Обработка успеха
+                switch(action) {
+                    case "negotiate":
+                        resultText += `<br><br><span style="color:#27ae60;">Успех! ${member.name} предоставил ценную информацию.</span>`;
+                        // Может раскрыть связи
+                        revealConnections(groupName, member.connections);
+                        break;
+                        
+                    case "eliminate":
+                        resultText += `<br><br><span style="color:#27ae60;">Успех! ${member.name} ликвидирован.</span>`;
+                        // Уменьшаем уровень угрозы
+                        updateThreatLevel(groupName, -10);
+                        break;
+                        
+                    // ... другие варианты успеха ...
+                }
+                game.player.stats.reputation += 5;
+            } else {
+                // Обработка провала
+                resultText += `<br><br><span style="color:#e74c3c;">Провал! Недостаточно навыка ${requiredSkill} (требуется ${difficulty}, у вас ${Math.round(successChance)})</span>`;
+                stressIncrease *= 2;
+                
+                // Возможные негативные последствия
+                if (Math.random() < 0.3) {
+                    resultText += `<br>Последствия: ${getRandomConsequence(action)}`;
+                }
+            }
+            
+            game.player.stress = Math.min(100, game.player.stress + stressIncrease);
+            dialogBox.innerHTML = resultText;
+            dialogBox.style.display = 'block';
+            updatePlayerInfo();
+            updateStressAndInjuries();
+        }
+
+        // NEW: Дополнительные функции
+        function revealConnections(groupName, connectionIds) {
+            const orgData = organizationMembers[groupName];
+            connectionIds.forEach(id => {
+                const member = orgData.members.find(m => m.id === id);
+                if (member && !member.known) {
+                    member.known = true;
+                    addEvent(`Раскрыт новый член организации: ${member.name}`);
+                }
+            });
+        }
+        
+        function updateThreatLevel(groupName, change) {
+            const orgData = organizationMembers[groupName];
+            // Логика изменения уровня угрозы...
+        }
+        
+        function getRandomConsequence(action) {
+            const consequences = {
+                negotiate: ["Утечка информации", "Потеря доверия", "Провал агента"],
+                eliminate: ["Гибель заложников", "Международный скандал", "Ответный теракт"],
+                // ... другие последствия ...
+            };
+            return consequences[action] ? consequences[action][Math.floor(Math.random() * consequences[action].length)] : "Репутационные потери";
+        }
+
+        // ... остальной код ...
+    </script>
+</body>
+</html>
